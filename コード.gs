@@ -131,6 +131,7 @@ function addYoutubeAccess(date,array,ua,param){
 }
 
 function notice() {
+  const recipient = "メールアドレス"
   var date = new Date();
   var today = Utilities.formatDate(date,"JST", "YYYY/MM/dd");
   var textFinder = SiteAccessSheet.createTextFinder(today);
@@ -139,6 +140,6 @@ function notice() {
   var todayaccess = SiteAccessSheet.getRange(row,2,1,2).getValues();
   if (todayaccess[0][0] > 0) {
     var body = "今日は " + todayaccess[0][0] + " 件のアクセスと、 " + todayaccess[0][1] + " 件のYouTubeのクリックがありました。　確認する https://docs.google.com/spreadsheets/d/1rWVSDIT7dk1qO5Kw9z6BaXWXDmKzsfiSLrSwrsQjjVg/edit?usp=sharing"
-    MailApp.sendEmail("wwnb9696@gmail.com", "虹コンリミスタサイン会", body)
+    MailApp.sendEmail(recipient, "虹コンリミスタサイン会", body)
   }
 }

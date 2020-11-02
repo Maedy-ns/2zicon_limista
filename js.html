@@ -1,0 +1,457 @@
+<script>
+const table = document.getElementById('targetTable');
+const members = document.memberform.member;
+const image = document.getElementById("source");
+let tablerows = table.rows;
+const membercolor = [null,"#FF1801","#fff001","#38A800","#019ffa","#001180","#925AE6"];
+var changeimgflag;
+var imagearray = {};
+var title = document.getElementById('title');
+var date = document.getElementById("date");
+var applink;
+var youtuberadio = document.getElementsByName("youtube");
+var youtubeidlist = [null];
+var timerId=[];
+var nowindex = 1;
+var ua = navigator.userAgent;
+var url;
+
+document.addEventListener("DOMContentLoaded", function() {
+  setyoutubeid();
+  deviceresponse();
+  onClickYoutube();
+  tablerows = [].slice.call( tablerows ) ;
+  setmouseevent();
+});
+
+window.onload = function(){
+  google.script.url.getLocation(function(location) { 
+    url = location.parameter;
+    google.script.run.addSiteAccess(ua,screen.width,screen.height,url);
+  });
+  //getImages();
+};
+
+//mouseイベント設定
+function setmouseevent() {
+  if(changeimgflag) {
+    for (var i = 1;i <=table.rows.length-1; i++) {
+      var cell = table.rows[i].cells[0];
+    
+      cell.addEventListener("mouseenter",function(e){ //onmouseover
+      var t = e.target;
+      var parent = t.parentNode;
+      var index = tablerows.indexOf( parent ) ;
+      
+      if( nowindex == index) {
+        return;
+      }
+      if(imagearray[index]) {
+        image.src = imagearray[index].src;
+        nowindex = index;
+        frameanimate(index);
+      }
+      else {
+        timerId[index]=setTimeout(storeImage,150,t,index);
+      }
+      image.onload = function() {
+        date.innerText = table.rows[index].cells[0].innerText/*textContent*/;
+        title.innerText = e.target.dataset.title;};
+      });
+    
+      cell.addEventListener("mouseleave",function(e){  //onmouseout
+        var t = e.target;
+        var parent = t.parentNode;
+        var index = tablerows.indexOf( parent ) ;
+        clearTimeout(timerId[index]);
+      });
+      
+    }
+  }
+}
+
+//表をソート
+function sort()
+{
+  let checkedmembers = [];
+  for (var i=0; i<=11; i++)　//checkboxにチェックが入ってるメンバーを取得して配列へ追加
+  {
+    if(members[i].checked == true)
+    {
+      checkedmembers.push(members[i].value);
+    }
+  }
+  
+  for (var i=1; i<=table.rows.length-1; i++)　//列ごとに判定
+  {
+    let isDisplay = true;
+    for(var j = 0; j<=checkedmembers.length-1; j++)
+    {
+      if(table.rows[i].cells[checkedmembers[j]].innerHTML.length == 0)
+      {
+        isDisplay = false;
+        break;
+      }
+    }
+    table.rows[i].style.display = (isDisplay) ? '' : 'none';
+  }
+}
+
+//全解除
+function cancel()　
+{
+  for(var i = 0; i<=11; i++)　//チェックボックス解除
+  {
+    members[i].checked = false;
+  }
+  for(var i = 1; i <= table.rows.length-1; i++)　//テーブル表示
+  {
+    table.rows[i].style.display = '';
+  }
+}
+
+//アニメーション時の枠の色を設定
+function setFrameColor(index) {
+  var topcolor,bottomcolor,leftcolor,rightcolor;
+  var frame = [];
+  var framecolor = [];
+  for(var i = 1; i<=12; i++)
+  {
+    if(table.rows[index].cells[i].textContent == "〇")
+    {
+      var colornumber = Math.ceil(i/2);
+      frame.push(colornumber);
+      if(framecolor.includes(colornumber) == false )
+      {
+        framecolor.push(colornumber);
+      }
+    }
+  }
+  if (framecolor.length < 1){
+  }
+  else if(framecolor.length == 1){
+    topcolor = membercolor[framecolor[0]];bottomcolor = membercolor[framecolor[0]];
+    leftcolor = membercolor[framecolor[0]];rightcolor = membercolor[framecolor[0]];
+  }
+  else if(framecolor.length == 2){
+    var ramda = getRandomInt(0,2);
+   topcolor = membercolor[framecolor[ramda]]; bottomcolor = membercolor[framecolor[ramda]];
+   leftcolor = membercolor[framecolor[1-ramda]]; rightcolor = membercolor[framecolor[1-ramda]];
+  }
+  else if(framecolor.length >= 4){
+    var randomarray = getRandomArray(framecolor.length);
+    topcolor = membercolor[framecolor[randomarray[0]]]; bottomcolor = membercolor[framecolor[randomarray[1]]];
+    leftcolor = membercolor[framecolor[randomarray[2]]]; rightcolor = membercolor[framecolor[randomarray[3]]];
+  }
+  else if(framecolor.length == 3){
+    if(frame.length == 4){
+      for (var i = 1; i <= 3; i++) {
+        if(frame[i]-frame[i-1]==0) {
+          var ramda = getRandomInt(0,4);
+          topcolor = membercolor[frame[(i+Math.floor(ramda/2)*2+((ramda%2)*3))%4]];
+          bottomcolor = membercolor[frame[(i+Math.floor(ramda/2)*2+(1-(ramda%2))*3)%4]];
+          leftcolor = membercolor[frame[(i+Math.floor(ramda/2)*2+2+(ramda%2)*3)%4]];
+          rightcolor = membercolor[frame[(i+Math.floor(ramda/2)*2+2+(1-(ramda%2))*3)%4]];
+          break;
+        }
+      }
+    }
+    else if(frame.length == 3||frame.length == 6){
+      var ramda = getRandomInt(0,12);
+      topcolor = membercolor[framecolor[(Math.floor(ramda/2)+(1+ramda%2)*Math.floor(ramda/6))%3]];
+      bottomcolor = membercolor[framecolor[(Math.floor(ramda/2)+(2-ramda%2)*Math.floor(ramda/6))%3]];
+      leftcolor = membercolor[framecolor[(Math.floor(ramda/2)+1+ramda%2+(2-ramda%2)*Math.floor(ramda/6))%3]];
+      rightcolor = membercolor[framecolor[(Math.floor(ramda/2)+2-ramda%2+(1+ramda%2)*Math.floor(ramda/6))%3]];
+    }
+    
+    else if(frame.length == 5){
+      for ( var i = 1; i <= 4; i++) {
+        if(frame[i] != frame[i-1] && (i ==4 || frame[i] != frame[i+1])) {
+          var ramda = getRandomInt(0,8);
+          topcolor = membercolor[frame[((i+2)+Math.floor(ramda/2)+Math.floor(ramda/4)*(ramda%2))%5]];
+          bottomcolor = membercolor[frame[((i+2)+Math.floor(ramda/2)+Math.floor(ramda/4)*(1-ramda%2))%5]];
+          leftcolor = membercolor[frame[(i+(1-ramda%2)*(Math.floor(ramda/2)+1)*3*(1-Math.floor(ramda/4))+Math.floor(ramda/2)*Math.floor(ramda/4))%5]];
+          rightcolor = membercolor[frame[(i+ramda%2*(Math.floor(ramda/2)+1)*3*(1-Math.floor(ramda/4))+Math.floor(ramda/2)*Math.floor(ramda/4))%5]];
+          break;
+        }
+      }
+    }
+  }
+  return [topcolor,bottomcolor,leftcolor,rightcolor];
+}
+
+
+//枠のアニメーションの仕方を定義
+function frameanimate(index)
+{
+  var colorarray = setFrameColor(index);
+  var style = window.getComputedStyle(image);
+  
+  //各辺の色を格納
+  var prevtop = style.borderTopColor;
+  var prevbottom = style.borderBottomColor;
+  var prevleft = style.borderLeftColor;
+  var prevright = style.borderRightColor;
+  
+  var newtop = colorarray[0];
+  var newbottom = colorarray[1];
+  var newleft = colorarray[2];
+  var newright = colorarray[3];
+  
+  //animation前の設定
+  function prevcolorset(){
+  //各辺の色の設定
+  //Top
+  addcssrule('span#imageframe:after',"border-color",prevtop);
+  addcssrule('span#imageframe:after',"width","364px");
+  addcssrule('img#source',"border-top-color",prevleft);
+  
+  //Bottom
+  addcssrule('span#imageframe:before',"border-color",prevbottom);
+  addcssrule('span#imageframe:before',"width","364px");
+  addcssrule('img#source',"border-bottom-color",prevright);
+  
+  //Left
+  addcssrule('span#imageframeV:before',"border-color",prevleft);
+  addcssrule('span#imageframeV:before',"height","209px");
+  addcssrule('img#source',"border-left-color",prevbottom);
+  
+  //Right
+  addcssrule('span#imageframeV:after',"border-color",prevright);
+  addcssrule('span#imageframeV:after',"height","208px");
+  addcssrule('img#source',"border-right-color",prevtop);
+  }
+  
+  function prevset(){
+  //各辺のopacityを１に設定
+  addcssrule('span#imageframe:after',"opacity","1");
+  addcssrule('span#imageframe:before',"opacity","1");
+  addcssrule('span#imageframeV:after',"opacity","1");
+  addcssrule('span#imageframeV:before',"opacity","1");
+  }
+  
+  function prevpropertyset(callback){
+  //transition-propertyの設定
+  addcssrule('img#source',"transition-property","border-color");
+  addcssrule('span#imageframe:after',"transition-property","border-color,width");
+  addcssrule('span#imageframe:before',"transition-property","border-color,width");
+  addcssrule('span#imageframeV:before',"transition-property","border-color,height");
+  addcssrule('span#imageframeV:after',"transition-property","border-color,height");
+  
+  callback();
+  }
+  function starttransition(){
+  //animation開始
+  //Top
+  addcssrule('span#imageframe:after',"border-color",newright);
+  addcssrule('span#imageframe:after',"width","0px");
+  addcssrule('img#source',"border-top-color",newtop);
+  
+  //Bottom
+  addcssrule('span#imageframe:before',"border-color",newleft);
+  addcssrule('span#imageframe:before',"width","0px");
+  addcssrule('img#source',"border-bottom-color",newbottom);
+  
+  //Left
+  addcssrule('span#imageframeV:before',"border-color",newtop);
+  addcssrule('span#imageframeV:before',"height","0px");
+  addcssrule('img#source',"border-left-color",newleft);
+  
+  //Right
+  addcssrule('span#imageframeV:after',"border-color",newbottom);
+  addcssrule('span#imageframeV:after',"height","0px");
+  addcssrule('img#source',"border-right-color",newright);
+  }
+  
+  
+  prevcolorset();
+  prevset();
+  setTimeout(prevpropertyset, 0, starttransition);
+}
+
+//枠アニメーション完了後の処理
+var selector = document.querySelector("img#source");
+selector.addEventListener("transitionend",function()
+{
+  addcssrule('span#imageframe:after',"opacity","0");
+  addcssrule('span#imageframe:before',"opacity","0");
+  addcssrule('span#imageframeV:after',"opacity","0");
+  addcssrule('span#imageframeV:before',"opacity","0");
+  addcssrule('img#source',"transition-property","none");
+  addcssrule('span#imageframe:after',"transition-property","none");
+  addcssrule('span#imageframe:before',"transition-property","none");
+  addcssrule('span#imageframeV:before',"transition-property","none");
+  addcssrule('span#imageframeV:after',"transition-property","none");
+})
+
+var sheets = document.styleSheets,
+  sheet = sheets[sheets.length - 1];
+//CSSにルールを追加
+function addcssrule(a,b,c,d) {
+  if (d == null)
+  {
+    d = sheet.cssRules.length;
+  }
+  //var property = window.getComputedStyle($('span#imageframe')[0], ':before').getPropertyValue('width');
+  if (sheet.insertRule) {	// Webkit
+    sheet.insertRule(a + ' { ' + b + ':' + c + ' }', d);
+  }
+  else if (sheet.addRule) {  // IE
+    sheet.addRule(a,'{'+ b + ':' + c + ' }', -1);
+  }
+}
+
+//乱数を取得
+function getRandomInt(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min)) + min; //The maximum is exclusive and the minimum is inclusive
+}
+
+//maxまでの整数をランダムに並び替えて配列を作成
+function getRandomArray(max) {
+  var array = [];
+  var returnarray = [];
+  for(var i = 0;i<max;i++)
+  {
+    array.push(i);
+  }
+  for(var i=max;i>=1;i--)
+  {
+    var index = getRandomInt(0,i);
+    returnarray.push(array[index]);
+    array.splice(index, 1);
+  }
+  return returnarray;
+}
+
+//画像をメモリへ入れておく
+function storeImage(e,index) {
+   var imgsrc = e.dataset.img;
+   var imgmemory = document.createElement('img');
+   imgmemory.src = "https://drive.google.com/uc?id=" + imgsrc + "&.png";
+   imagearray[index] = imgmemory;
+   image.src = imgmemory.src;
+   nowindex = index;
+   
+   frameanimate(index);
+}
+
+//youtubeidlistの作成
+function setyoutubeid() {
+  for ( var i = 1;i <= table.rows.length-1; i++) {
+    youtubeidlist.push(table.rows[i].cells[0].childNodes[0].dataset.href);
+  }
+}
+
+//アプリとブラウザを分ける機能をつけるかどうか
+var appbrowserflag = false;
+
+//iOSかAndroidかを判断しアプリ用のリンクを設定
+function setAppLink() { 
+  if (navigator.userAgent.indexOf('Windows') > 0 ) {
+    hideapplink();
+  }
+  else if (navigator.userAgent.indexOf('Android') > 0) {
+    applink = "vnd.youtube:";
+    setLink(applink);
+  }
+  else if (navigator.userAgent.indexOf('iPhone') > 0 || navigator.userAgent.indexOf('iPad') > 0 ) {
+    applink = "youtube:"
+    setLink(applink);
+  }
+  else {
+    hideapplink();
+  }
+}
+
+//ブラウザ用またはアプリ用にURLを変更
+function changeLink() { 
+  if (youtuberadio[0].checked) {
+    setLink(applink);
+  }
+  else {
+    setLink("https://m.youtube.com/watch?v=");
+  }
+}
+
+//URL設定
+function setLink(link) {
+  for (var i = 1;i <= table.rows.length-1;i++) {
+    table.rows[i].cells[0].childNodes[0].href = link + youtubeidlist[i];
+  }
+}
+
+//アプリorブラウザの選択を非表示
+function hideapplink() {
+  var youtubediv = document.getElementById("youtube");
+  youtubediv.style.display = "none";
+  setLink("https://youtu.be/");
+}
+
+//画面サイズによってデザインを変更
+function deviceresponse() {
+  if(screen.width >= 900)
+  {  // PC
+    addcssrule('.br-sp',"display","none");
+    addcssrule('.time-sp',"display","none");
+    changeimgflag = true;
+    hideapplink();
+  }
+  else
+  {  // スマホ、タブレット
+    addcssrule('.br-pc',"display","none");
+    addcssrule('div#image',"display","none");
+    addcssrule('.time-pc',"display","none");
+    addcssrule('div#main',"width","100%");
+    addcssrule('div#main',"width","100%");
+    addcssrule('table thead tr th:nth-of-type(1)',"width","");
+    addcssrule('header',"overflow-x","scroll");
+    addcssrule('header button',"height","20px");
+    addcssrule('header button',"top","3px");
+    addcssrule('td',"padding","0");
+    addcssrule('table',"font-size","14px");
+    addcssrule('table td',"text-align","center");
+    addcssrule('table tbody td',"padding","2px 0px 0px");
+    addcssrule('form span::before',"top","1px");
+    addcssrule('input[type="checkbox"]:checked + span::after',"top","2px");
+    changeimgflag = false;
+    if (appbrowserflag) {
+    setAppLink()
+    } else  {
+    hideapplink();
+    }
+  }
+}
+
+//aタグにクリックされたときの動作
+function onClickYoutube() {
+  var as = document.getElementsByTagName("a"); 
+  var triggers = Array.from(as);
+  triggers.forEach(function(target) {
+    target.addEventListener('click', function(e) {
+      var array = [];
+      var t = target.parentNode.parentNode;
+      for( var i = 1;i<=12;i++){
+        if(t.cells[i].textContent == "〇") {
+          array.push(i-1);
+        }
+      }
+      google.script.run.addYoutubeAccess(target.textContent,array,ua,url);
+    });
+  })
+  deletecssrule();
+}
+
+//不要になったCSSルールを削除
+function deletecssrule() {
+  var rules = sheet.cssRules.length;
+  var deleterule = rules-200;
+  if(rules >= 500) {
+    for (var i = 150;i <= deleterule; i++) {
+      sheet.deleteRule(i);
+    }
+  }
+}
+
+</script>

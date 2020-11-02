@@ -19,22 +19,8 @@ const YoutubeUASheet = Sheets[3];
 
 const memberName = ["中村","清水","的場","山本","根本","岡田","大和","山崎","隈本","片岡","鶴見","蛭田"];
 
-//翌日の日付を入力する
-//GASのトリガー機能で毎日０時に実行されるように設定
-function setDate() {
-  var last = SiteAccessSheet.getLastRow();
-  var tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  tomorrow = Utilities.formatDate(tomorrow,"JST", "YYYY/MM/dd");
-  SiteAccessSheet.getRange(last+1,1,1,3).setValues([[tomorrow,0,0]]);
-}
-
 function addSiteAccess(ua,w,h,param) {
-  if(param["myself"] == "true") { return; }
-  
-  //累計アクセス数更新
-  var totalvalue = SiteAccessSheet.getRange("D2").getValue();
-  SiteAccessSheet.getRange("D2").setValue(totalvalue+1);
+  if(param["myself"] == "true") { return; } //自分からのアクセスはログに記録しない
   
   //今日のアクセス数更新
   var last = SiteAccessSheet.getLastRow();
@@ -43,6 +29,10 @@ function addSiteAccess(ua,w,h,param) {
   var date_T = Utilities.formatDate(date, 'JST', 'HH:mm:ss');
   var textFinder = SiteAccessSheet.createTextFinder(today);
   var range = textFinder.findNext();
+  if(range == null) {
+    SiteAccessSheet.getRange(last+1,1,1,3).setValues([[today,0,0]]);
+    range = textFinder.findNext();
+  }
   var row = range.getRow();
   var todayvalue = SiteAccessSheet.getRange(row,2).getValue();
   SiteAccessSheet.getRange(row,2).setValue(todayvalue + 1);
@@ -67,7 +57,7 @@ function addSiteAccess(ua,w,h,param) {
 
 //クリックされたYouTubeリンクを記録
 function addYoutubeAccess(date,array,ua,param){
-  if(param["myself"] == "true") { return; }
+  if(param["myself"] == "true") { return; } //自分からのアクセスはログに記録しない
   
   //アクセスカウンター
   //今日のクリック数記録
@@ -130,8 +120,8 @@ function addYoutubeAccess(date,array,ua,param){
   YoutubeUASheet.getRange(YUAlast+1,1,1,5).setValues(d);
 }
 
+//アクセスがあった日には通知を送る
 function notice() {
-  const recipient = "メールアドレス"
   var date = new Date();
   var today = Utilities.formatDate(date,"JST", "YYYY/MM/dd");
   var textFinder = SiteAccessSheet.createTextFinder(today);
@@ -139,7 +129,9 @@ function notice() {
   var row = range.getRow();
   var todayaccess = SiteAccessSheet.getRange(row,2,1,2).getValues();
   if (todayaccess[0][0] > 0) {
+    const recipient = PropertiesService.getScriptProperties().getProperty("MailAddress");
+    const subject = "虹コン リミスタサイン会";
     var body = "今日は " + todayaccess[0][0] + " 件のアクセスと、 " + todayaccess[0][1] + " 件のYouTubeのクリックがありました。　確認する https://docs.google.com/spreadsheets/d/1rWVSDIT7dk1qO5Kw9z6BaXWXDmKzsfiSLrSwrsQjjVg/edit?usp=sharing"
-    MailApp.sendEmail(recipient, "虹コンリミスタサイン会", body)
+    MailApp.sendEmail(recipient, subject, body)
   }
 }

@@ -1,26 +1,58 @@
 function doGet(e) { //アクセスされた時に呼ばれる
-  const htmloutput = HtmlService.createTemplateFromFile('index')
-      .evaluate()
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1.0')
-      .setTitle("虹コン リミスタサイン会");
+  const html = HtmlService.createTemplateFromFile('index');
+  html.tabledata = createTableData();
+  const output = html.evaluate().addMetaTag('viewport', 'width=device-width, initial-scale=1.0').setTitle("虹コン リミスタサイン会");
             //.setFaviconUrl('https://drive.google.com/uc?id=1YwMIEtg5aIRHXkm9RHwZwzNT61LmklL8&.png');
-  return htmloutput;
+  return output;
 }
 
-//アクセスログスプレッドシート
+//データスプレッドシート
 const LogSheet = SpreadsheetApp.openById('1rWVSDIT7dk1qO5Kw9z6BaXWXDmKzsfiSLrSwrsQjjVg');
 const Sheets = LogSheet.getSheets();
-const SiteAccessSheet = Sheets[0];
-const UserAgentSheet = Sheets[1];
-const YoutubeAccessSheet = Sheets[2];
-const YoutubeUASheet = Sheets[3];
+const DataSheet = Sheets[0];
+const SiteAccessSheet = Sheets[1];
+const UserAgentSheet = Sheets[2];
+const YoutubeAccessSheet = Sheets[3];
+const YoutubeUASheet = Sheets[4];
 //スプレッドシートのURL
 //https://docs.google.com/spreadsheets/d/1rWVSDIT7dk1qO5Kw9z6BaXWXDmKzsfiSLrSwrsQjjVg/edit?usp=sharing
 
 const memberName = ["中村","清水","的場","山本","根本","岡田","大和","山崎","隈本","片岡","鶴見","蛭田"];
 
+//table作成
+function createTableData() {
+    var tablehtml = "";
+  try {
+    const columnAVals = DataSheet.getRange('A:A').getValues(); //データ追加中のアクセスに備えてA列のみで判定する（A列を最後に入力する)
+    const lastRow = columnAVals.filter(String).length;
+    var tabledata = DataSheet.getRange(2, 1, lastRow-1, 18).getValues();
+    Logger.log(tabledata);
+    tabledata.forEach(function (trdata) {
+      var tr = "<tr>";
+      if (trdata[4]) {
+        tr += '<th data-img="'+ trdata[1] + '" data-title ="'+ trdata[2] + '"><a data-href="' + trdata[3] + '" target="_blank">' + trdata[0] +'<br class="br-sp"><span class="time-sp">' + trdata[4] + '</span><span class="time-pc">(' + trdata[5] + '~)</span></a></th>';
+      } else {
+        tr += '<th data-img="'+ trdata[1] + '" data-title ="'+ trdata[2] + '"><a data-href="' + trdata[3] + '" target="_blank">' + trdata[0] + '</a></th>';
+      }
+      for (var i = 6; i <= 17; i++) {
+        tr += "<td>" + trdata[i] + "</td>";
+      }
+      tr += "</tr>";
+      tablehtml += tr;
+    });
+  }
+  catch (error) {
+    tablehtml = '<tr> <td　colspan="13">データが取得できませんでした。</td> </tr>';
+    
+  }
+  finally {
+    return tablehtml;
+  }
+}
+
+
 function addSiteAccess(ua,w,h,param) {
-  if(param["myself"] == "true") { return; } //自分からのアクセスはログに記録しない
+  if(param["user"] == "myself") { return; } //自分からのアクセスはログに記録しない
   
   //今日のアクセス数更新
   var last = SiteAccessSheet.getLastRow();
@@ -57,7 +89,7 @@ function addSiteAccess(ua,w,h,param) {
 
 //クリックされたYouTubeリンクを記録
 function addYoutubeAccess(date,array,ua,param){
-  if(param["myself"] == "true") { return; } //自分からのアクセスはログに記録しない
+  if(param["user"] == "myself") { return; } //自分からのアクセスはログに記録しない
   
   //アクセスカウンター
   //今日のクリック数記録
@@ -126,12 +158,15 @@ function notice() {
   var today = Utilities.formatDate(date,"JST", "YYYY/MM/dd");
   var textFinder = SiteAccessSheet.createTextFinder(today);
   var range = textFinder.findNext();
+  if(range == null) {
+    return;
+  }
   var row = range.getRow();
   var todayaccess = SiteAccessSheet.getRange(row,2,1,2).getValues();
-  if (todayaccess[0][0] > 0) {
+  if (todayaccess[0][0] > 0 || todayaccess[0][1] > 0) {
     const recipient = PropertiesService.getScriptProperties().getProperty("MailAddress");
     const subject = "虹コン リミスタサイン会";
-    var body = "今日は " + todayaccess[0][0] + " 件のアクセスと、 " + todayaccess[0][1] + " 件のYouTubeのクリックがありました。　確認する https://docs.google.com/spreadsheets/d/1rWVSDIT7dk1qO5Kw9z6BaXWXDmKzsfiSLrSwrsQjjVg/edit?usp=sharing"
+    var body = "今日は " + todayaccess[0][0] + " 件のサイトアクセスと、 " + todayaccess[0][1] + " 件のYouTubeアクセスがありました。　確認する https://docs.google.com/spreadsheets/d/1rWVSDIT7dk1qO5Kw9z6BaXWXDmKzsfiSLrSwrsQjjVg/edit?usp=sharing"
     MailApp.sendEmail(recipient, subject, body)
   }
 }

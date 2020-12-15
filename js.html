@@ -14,7 +14,9 @@ var youtubeidlist = [null];
 var timerId=[];
 var nowindex = 1;
 var ua = navigator.userAgent;
-var url;
+var url = "";
+var isAnimating = false;
+var animationTimer = 0;
 
 document.addEventListener("DOMContentLoaded", function() {
   setyoutubeid();
@@ -29,7 +31,6 @@ window.onload = function(){
     url = location.parameter;
     google.script.run.addSiteAccess(ua,screen.width,screen.height,url);
   });
-  //getImages();
 };
 
 //mouseイベント設定
@@ -52,7 +53,7 @@ function setmouseevent() {
         frameanimate(index);
       }
       else {
-        timerId[index]=setTimeout(storeImage,150,t,index);
+        timerId[index]=setTimeout(storeImage,150,t,index); //150ミリ秒以上カーソルを乗せていたら画像読み込み
       }
       image.onload = function() {
         date.innerText = table.rows[index].cells[0].innerText/*textContent*/;
@@ -127,19 +128,18 @@ function setFrameColor(index) {
       }
     }
   }
-  if (framecolor.length < 1){
-  }
-  else if(framecolor.length == 1){
+  //参加メンバー数およびメンバーカラー数によって場合分け
+  if(framecolor.length == 1){
     topcolor = membercolor[framecolor[0]];bottomcolor = membercolor[framecolor[0]];
     leftcolor = membercolor[framecolor[0]];rightcolor = membercolor[framecolor[0]];
   }
   else if(framecolor.length == 2){
-    var ramda = getRandomInt(0,2);
-   topcolor = membercolor[framecolor[ramda]]; bottomcolor = membercolor[framecolor[ramda]];
-   leftcolor = membercolor[framecolor[1-ramda]]; rightcolor = membercolor[framecolor[1-ramda]];
+    var ramda = getRandomInt(0,2);  //乱数を用いてアニメーションのたびに配色パターンを変える
+    topcolor = membercolor[framecolor[ramda]]; bottomcolor = membercolor[framecolor[ramda]];
+    leftcolor = membercolor[framecolor[1-ramda]]; rightcolor = membercolor[framecolor[1-ramda]];
   }
   else if(framecolor.length >= 4){
-    var randomarray = getRandomArray(framecolor.length);
+    var randomarray = getRandomArray(framecolor.length);  //乱数を用いてアニメーションのたびに配色パターンを変える
     topcolor = membercolor[framecolor[randomarray[0]]]; bottomcolor = membercolor[framecolor[randomarray[1]]];
     leftcolor = membercolor[framecolor[randomarray[2]]]; rightcolor = membercolor[framecolor[randomarray[3]]];
   }
@@ -180,12 +180,12 @@ function setFrameColor(index) {
   return [topcolor,bottomcolor,leftcolor,rightcolor];
 }
 
-
+var divimage = document.getElementById("image");
 //枠のアニメーションの仕方を定義
 function frameanimate(index)
 {
   var colorarray = setFrameColor(index);
-  var style = window.getComputedStyle(image);
+  var style = window.getComputedStyle(divimage);
   
   //各辺の色を格納
   var prevtop = style.borderTopColor;
@@ -203,23 +203,23 @@ function frameanimate(index)
   //各辺の色の設定
   //Top
   addcssrule('span#imageframe:after',"border-color",prevtop);
-  addcssrule('span#imageframe:after',"width","364px");
-  addcssrule('img#source',"border-top-color",prevleft);
+  addcssrule('span#imageframe:after',"width","100%");
+  addcssrule('div#image',"border-top-color",prevleft);
   
   //Bottom
   addcssrule('span#imageframe:before',"border-color",prevbottom);
-  addcssrule('span#imageframe:before',"width","364px");
-  addcssrule('img#source',"border-bottom-color",prevright);
+  addcssrule('span#imageframe:before',"width","100%");
+  addcssrule('div#image',"border-bottom-color",prevright);
   
   //Left
   addcssrule('span#imageframeV:before',"border-color",prevleft);
-  addcssrule('span#imageframeV:before',"height","209px");
-  addcssrule('img#source',"border-left-color",prevbottom);
+  addcssrule('span#imageframeV:before',"height","100%");
+  addcssrule('div#image',"border-left-color",prevbottom);
   
   //Right
   addcssrule('span#imageframeV:after',"border-color",prevright);
-  addcssrule('span#imageframeV:after',"height","208px");
-  addcssrule('img#source',"border-right-color",prevtop);
+  addcssrule('span#imageframeV:after',"height","100%");
+  addcssrule('div#image',"border-right-color",prevtop);
   }
   
   function prevset(){
@@ -232,7 +232,7 @@ function frameanimate(index)
   
   function prevpropertyset(callback){
   //transition-propertyの設定
-  addcssrule('img#source',"transition-property","border-color");
+  addcssrule('div#image',"transition-property","border-color");
   addcssrule('span#imageframe:after',"transition-property","border-color,width");
   addcssrule('span#imageframe:before',"transition-property","border-color,width");
   addcssrule('span#imageframeV:before',"transition-property","border-color,height");
@@ -245,44 +245,45 @@ function frameanimate(index)
   //Top
   addcssrule('span#imageframe:after',"border-color",newright);
   addcssrule('span#imageframe:after',"width","0px");
-  addcssrule('img#source',"border-top-color",newtop);
+  addcssrule('div#image',"border-top-color",newtop);
   
   //Bottom
   addcssrule('span#imageframe:before',"border-color",newleft);
   addcssrule('span#imageframe:before',"width","0px");
-  addcssrule('img#source',"border-bottom-color",newbottom);
+  addcssrule('div#image',"border-bottom-color",newbottom);
   
   //Left
   addcssrule('span#imageframeV:before',"border-color",newtop);
   addcssrule('span#imageframeV:before',"height","0px");
-  addcssrule('img#source',"border-left-color",newleft);
+  addcssrule('div#image',"border-left-color",newleft);
   
   //Right
   addcssrule('span#imageframeV:after',"border-color",newbottom);
   addcssrule('span#imageframeV:after',"height","0px");
-  addcssrule('img#source',"border-right-color",newright);
+  addcssrule('div#image',"border-right-color",newright);
   }
   
+  //枠アニメーション完了後の処理
+  function endTransition() {
+    addcssrule('span#imageframe:after',"opacity","0");
+    addcssrule('span#imageframe:before',"opacity","0");
+    addcssrule('span#imageframeV:after',"opacity","0");
+    addcssrule('span#imageframeV:before',"opacity","0");
+    addcssrule('div#image',"transition-property","none");
+    addcssrule('span#imageframe:after',"transition-property","none");
+    addcssrule('span#imageframe:before',"transition-property","none");
+    addcssrule('span#imageframeV:before',"transition-property","none");
+    addcssrule('span#imageframeV:after',"transition-property","none");
+  }
   
+  clearTimeout(animationTimer);
+  animationTimer = setTimeout(endTransition,802);
   prevcolorset();
   prevset();
   setTimeout(prevpropertyset, 0, starttransition);
 }
 
-//枠アニメーション完了後の処理
-var selector = document.querySelector("img#source");
-selector.addEventListener("transitionend",function()
-{
-  addcssrule('span#imageframe:after',"opacity","0");
-  addcssrule('span#imageframe:before',"opacity","0");
-  addcssrule('span#imageframeV:after',"opacity","0");
-  addcssrule('span#imageframeV:before',"opacity","0");
-  addcssrule('img#source',"transition-property","none");
-  addcssrule('span#imageframe:after',"transition-property","none");
-  addcssrule('span#imageframe:before',"transition-property","none");
-  addcssrule('span#imageframeV:before',"transition-property","none");
-  addcssrule('span#imageframeV:after',"transition-property","none");
-})
+
 
 var sheets = document.styleSheets,
   sheet = sheets[sheets.length - 1];
@@ -339,8 +340,14 @@ function storeImage(e,index) {
 
 //youtubeidlistの作成
 function setyoutubeid() {
-  for ( var i = 1;i <= table.rows.length-1; i++) {
+  try {
+    for ( var i = 1;i <= table.rows.length-1; i++) {
     youtubeidlist.push(table.rows[i].cells[0].childNodes[0].dataset.href);
+    }
+  }
+  catch (error) {
+    console.error(error);
+    return;
   }
 }
 
@@ -367,18 +374,28 @@ function setAppLink() {
 
 //ブラウザ用またはアプリ用にURLを変更
 function changeLink() { 
-  if (youtuberadio[0].checked) {
+  try {
+    if (youtuberadio[0].checked) {
     setLink(applink);
-  }
-  else {
-    setLink("https://m.youtube.com/watch?v=");
+    }
+    else {
+      setLink("https://m.youtube.com/watch?v=");
+    }
+  } catch (error) {
+      console.error(error);
   }
 }
 
 //URL設定
 function setLink(link) {
-  for (var i = 1;i <= table.rows.length-1;i++) {
+  try {
+    for (var i = 1;i <= table.rows.length-1;i++) {
     table.rows[i].cells[0].childNodes[0].href = link + youtubeidlist[i];
+    }
+  }
+  catch (error) {
+    console.error(error);
+    return;
   }
 }
 
@@ -401,7 +418,7 @@ function deviceresponse() {
   else
   {  // スマホ、タブレット
     addcssrule('.br-pc',"display","none");
-    addcssrule('div#image',"display","none");
+    addcssrule('div#imagebox',"display","none");
     addcssrule('.time-pc',"display","none");
     addcssrule('div#main',"width","100%");
     addcssrule('div#main',"width","100%");
